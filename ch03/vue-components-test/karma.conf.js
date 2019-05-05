@@ -12,6 +12,11 @@ module.exports = function(config) {
     // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
     frameworks: ['mocha'],
 
+    // https://github.com/karma-runner/karma-mocha/issues/42
+    plugins: [
+        require("karma-mocha")
+    ],
+
     // list of files / patterns to load in the browser
     files: [
       'components/*.js',
