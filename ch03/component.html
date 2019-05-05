@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<title>Vue.js でコンポーネント</title>
+<script src="https://unpkg.com/vue@2.5.17"></script>
+
+<div id="app">
+    <div id="fruits-component">
+        <ol>
+            <fruits-item-name v-for="fruits in fruitsItems" :key="fruits.name" :fruits-item="fruits"></fruits-item-name>
+        </ol>
+    </div>
+
+    <div id="fruits-counter">
+        <div v-for="fruit in fruits" :key="fruit.name">
+            <!-- counter-button のカスタムイベント 'increment' を listen -->
+            {{ fruit.name }} <counter-button v-on:increment="incrementCartStatus()"></counter-button>
+        </div>
+        <p>合計: {{ total }}</p>
+    </div>
+</div>
+
+<script>
+Vue.component('fruits-item-name', {
+    props: {
+        fruitsItem: { // テンプレートではケバブケース
+            type: Object,
+            required: true,
+        }
+    },
+    template: '<li>{{ fruitsItem.name }}</li>'
+})
+
+new Vue({
+    el: '#fruits-component',
+    data: {
+        fruitsItems: [
+            {name: '梨'},
+            {name: 'イチゴ'}
+        ]
+    }
+})
+
+var counterButton = Vue.extend({
+    template: '<span>{{ counter }}個 <button v-on:click="addToCart">追加</button></span>',
+    data: function() {
+        return {
+            counter: 0
+        }
+    },
+    methods: {
+        addToCart: function() {
+            this.counter += 1
+            this.$emit('increment') // increment カスタムイベントの発火
+        }
+    }
+})
+
+new Vue({
+    el: '#fruits-counter',
+    components: {
+        'counter-button': counterButton
+    },
+    data: {
+        total: 0,
+        fruits: [
+            {name: '梨'},
+            {name: 'イチゴ'}
+        ]
+    },
+    methods: {
+        incrementCartStatus: function() {
+            this.total += 1
+        }
+    }
+})
+</script>
