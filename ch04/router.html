@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Vue.js で SPA</title>
+</head>
+
+<body>
+    <div id="app">
+        <nav>
+            <router-link to="/top">トップ</router-link>
+            <router-link to="/users/new">ユーザー新規登録</router-link>
+            <router-link to="/users">ユーザー一覧</router-link>
+            <router-link to="/login" v-show="!Auth.isLoggedIn()">ログイン</router-link>
+            <router-link to="/logout" v-show="Auth.isLoggedIn()">ログアウト</router-link>
+            <router-view></router-view>
+        </nav>
+    </div>
+    <script src="https://unpkg.com/vue@2.5.17"></script>
+    <script src="https://unpkg.com/vue-router@3.0.1"></script>
+</body>
+
+<script type="text/x-template" id="login">
+    <div id="login">
+        <h1>ログイン</h1>
+        <p v-if="$route.query.redirect">この機能を利用するにはログインしてください</p>
+        <div v-if="Auth.isLoggedIn()"> <!-- Auth.isLoggedIn としてしまうとアクセスした時しか評価されず、ログアウトしても Auth.isLoggedIn=true となってしまい、ログインできなくなってしまう -->
+            <p>ログイン済みです</p>
+            <p>token: {{ Auth.token() }}</p>
+        </div>
+        <div v-else>
+            <form @submit.prevent="login">
+                <label><input type="text" v-model="email" placeholder="email"></label>
+                <label><input type="password" v-model="pass" placeholder="password"></label><br>
+                <button type="submit">ログイン</button>
+                <p class="error" v-if="error">ログインに失敗しました</p>
+            </form>
+        </div>
+    </div>
+</script>
+
+<script type="text/x-template" id="user-list">
+    <div id="user-list">
+        <h1>ユーザー一覧</h1>
+        <div class="loading" v-if="loading">読み込み中...</div>
+        <div class="error" v-if="error">{{ error }}</div>
+        <ul>
+            <li v-for="user in users" :key="user.id">
+                <router-link :to="{ name:'user', params: { userID: user.id }}">
+                    {{ user.id }}: {{ user.name }}
+                </router-link>
+            </li>
+        </ul>
+    </div>
+</script>
+
+<script type="text/x-template" id="user-detail">
+    <div id="user-detail">
+        <h1>ユーザー詳細</h1>
+        <div class="loading" v-if="loading">読み込み中...</div>
+        <div class="error" v-if="error">{{ error }}</div>
+        <div v-if="user" :id="user.id">
+            <h2>{{ user.name }}</h2>
+            <p>{{ user.description }}</p>
+        </div>
+        <div>
+            <router-link :to="{ name:'user-profile' }">プロフィールページを見る</router-link> <!-- params: {userID: user.id} は不要。-->
+            <router-link :to="{ name:'user-posts' }">投稿ページを見る</router-link>
+            <router-view></router-view> <!-- childrenで定義したコンテンツがここに表示される -->
+        </div>
+    </div>
+</script>
+
+<script type="text/x-template" id="user-create">
+    <div id="user-create">
+        <h1>ユーザー新規登録</h1>
+        <div class="sending" v-if="sending">作成中...</div>
+        <div>
+            <div>
+                <label>名前: </label>
+                <input type="text" v-model="user.name">
+            </div>
+            <div>
+                <label>プロフィール文: </label>
+                <textarea v-model="user.description"></textarea>
+            </div>
+            <div class="error" v-if="error">
+                {{ error }}
+            </div>
+            <div>
+                <input type="button" @click="createUser" value="作成">
+            </div>
+        </div>
+    </div>
+</script>
+
+<script>
+var Auth = {
+    login: function(email, pass, callback) {
+        setTimeout(function() {
+            if (email === 'vue@example.com' && pass === 'vue') {
+                localStorage.token = Math.random().toString(36).substring(7)
+                if (callback) {
+                    callback(true)
+                }
+            } else {
+                if (callback) {
+                    callback(false)
+                }
+            }
+        }, 300)
+    },
+    logout: function() {
+      delete localStorage.token
+    },
+    isLoggedIn: function() {
+       return !!localStorage.token
+    },
+    token: function() {
+        return localStorage.getItem("token")
+    }
+}
+
+var Login = {
+    template: '#login',
+    data: function() {
+        return {
+            Auth: Auth,
+            email: '',
+            pass: '',
+            error: false
+        }
+    },
+    methods: {
+        login: function() {
+            Auth.login(this.email, this.pass, (function(isLoggedIn) {
+                if (isLoggedIn) {
+                    this.error = false
+                    // redirect パラメータが付いている場合はそこに遷移させる
+                    // this.$router.push と異なり history スタックには新しいエントリを追加しない。
+                    // そのため、ブラウザの戻るボタンがクリックされても、前のURL（ログインページ）には戻らない
+                    this.$router.replace(this.$route.query.redirect || '/')
+                } else {
+                    this.error = true
+                }
+            }).bind(this))
+        }
+    }
+}
+
+var users = [
+    {
+        id: 1,
+        name: 'nyaan',
+        description: 'あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。',
+    },
+    {
+        id: 2,
+        name: 'waan',
+        description: 'またそのなかでいっしょになったたくさんのひとたち、ファゼーロとロザーロ、羊飼のミーロや、顔の赤いこどもたち、地主のテーモ、山猫博士のボーガント・デストゥパーゴなど、いまこの暗い巨きな石の建物のなかで考えていると、みんなむかし風のなつかしい青い幻燈のように思われます。',
+    },
+    {
+        id: 3,
+        name: 'piyo',
+        description: 'では、わたくしはいつかの小さなみだしをつけながら、しずかにあの年のイーハトーヴォの五月から十月までを書きつけましょう。',
+    }
+]
+
+var getUsers = function(callback) {
+    setTimeout(function() {
+        callback(null, users)
+    }, 700)
+}
+
+var getUser = function(userID, callback) {
+    setTimeout(function() {
+        var filteredUsers = users.filter(function(user) {
+            return user.id === parseInt(userID, 10)
+        })
+        if (filteredUsers.length == 0) {
+            callback(`invalid userID ${userID}`, null)
+        } else {
+            callback(null, filteredUsers && filteredUsers[0])
+        }
+    }, 700)
+}
+
+var postUser = function(params, callback) {
+    setTimeout(function() {
+        params.id = users.length + 1
+        users.push(params)
+        callback(null, params)
+    }, 700)
+
+}
+
+var UserList = {
+    template: '#user-list',
+    data: function() {
+        return {
+            loading: false,
+            users: function() {
+                return {}
+            },
+            error: null
+        }
+    },
+    created: function() {
+        this.fetchData()
+    },
+    // $route の変更を watch して、ルーティングが変更された時に再度データを取得する
+    watch: {
+      '$route': 'fetchData'
+    },
+    methods: {
+        fetchData: function() {
+            console.log('UserList: call fetchData()')
+
+            this.loading = true
+            getUsers((function(err, users) {
+                this.loading = false
+                if (err) {
+                    this.error = err.toString()
+                } else {
+                    // nextに渡すcallbackでコンポーネント自身にアクセスできる
+                    this.users = users
+                }
+            }).bind(this)) // Function.prototype.bind は this のスコープを渡すために利用
+        }
+    },
+    // // コンポーネント内のフック関数。ページ遷移が行われて、コンポーネントが初期化される前、に呼び出される
+    // beforeEnter: function(to, from, next) {
+    //     getUsers(function(err, users) {
+    //         if (err) {
+    //             this.error = err.toString()
+    //         } else {
+    //             // nextに渡すcallbackでコンポーネント自身にアクセスできる
+    //             next(function(vm) {
+    //                 vm.users = users
+    //             })
+    //         }
+    //     }).bind(this)
+    // },
+    // // 別のページへ遷移する際のフック関数。編集途中だったらconfirmを表示するなどの利用用途が考えられる
+    // beforeRouteLeave: function(to, from, next) {
+    //     console.log("leave /users")
+    //     console.log(`to: ${ to.path } from: ${ from.path } next: ${ typeof next }`)
+    // }
+}
+
+var UserDetail = {
+    template: '#user-detail',
+    data: function() {
+        return {
+            loading: false,
+            user: null,
+            error: null
+        }
+    },
+    created: function() {
+        this.fetchData()
+    },
+    watch: {
+        '$route': 'fetchData'
+    },
+    methods: {
+        fetchData: function() {
+            console.log('UserDetail: call fetchData()')
+
+            this.loading = true
+            getUser(this.$route.params.userID, (function (err, user) {
+                this.loading = false
+                if (err) {
+                    this.error = err.toString()
+                } else {
+                    this.error = null
+                    this.user = user
+                }
+            }).bind(this))
+        }
+    }
+}
+
+var UserCreate = {
+    template: '#user-create',
+    data: function() {
+        return {
+            sending: false,
+            user: this.defaultUser(),
+            error:null
+        }
+    },
+    created: function() {
+
+    },
+    methods: {
+        defaultUser: function() {
+          return {
+              name: '',
+              description: '',
+          }
+        },
+        createUser: function() {
+            if (this.user.name.trim() === '') {
+                this.error = '名前は必須です'
+                return
+            }
+            if (this.user.description.trim() === '') {
+                this.error = 'プロフィール文は必須です'
+                return
+            }
+
+            this.sending = true
+            postUser(this.user, (function(err, createdUser) {
+                this.sending = false
+
+                if (err) {
+                    this.error = err.toString()
+                } else {
+                    this.error = null
+                    this.user = this.defaultUser() // フォームのリセット
+                    alert(`新規ユーザが登録されました\nuserID: ${ createdUser.id }`)
+                    this.$router.push({ name: 'user', params: { userID: createdUser.id }})
+                }
+            }).bind(this))
+        }
+    }
+}
+
+var UserProfile = {
+    template: `
+<div class="user-profile">
+    <p> こちらはユーザー {{ $route.params.userID }} のプロフィールページです</p>
+</div>
+`
+}
+
+var UserPosts = {
+    template: `
+<div class="user-posts">
+    <p> こちらはユーザー {{ $route.params.userID }} の投稿ページです</p>
+</div>
+`
+}
+
+// component には Vue.extend() Niyotte作られたコンポーネントコンストラクタでも、コンポーネントオプションのオブジェクトでも渡せる
+var router = new VueRouter({
+    routes: [
+        {
+            path: '/login',
+            component: Login
+        },
+        {
+            path: '/logout',
+            component: {
+                template: '<div>ログアウトしました</div>'
+            },
+            beforeEnter: function(to, from, next) {
+                Auth.logout()
+                next()
+            }
+        },
+        {
+            path: '/top',
+            component: {
+                template: '<div>トップページです</div>'
+            }
+        },
+        {
+            path: '/users',
+            component: UserList,
+        },
+        {
+            path: '/users/new', // /users/:userID より前に定義する必要がある。ルーターは先頭から評価されるため。
+            component: UserCreate,
+            // ルート単位のフック関数
+            beforeEnter: function(to, from, next) {
+                if (!Auth.isLoggedIn()) {
+                    next({
+                        path: '/login',
+                        query: { redirect: to.fullPath }
+                    })
+                } else {
+                    next()
+                }
+            }
+        },
+        {
+            name: 'user',
+            path: '/users/:userID',
+            component: UserDetail,
+            children: [
+                {
+                    name: 'user-profile',
+                    path: 'profile',
+                    component: UserProfile
+                },
+                {
+                    name: 'user-posts',
+                    path: 'posts',
+                    component: UserPosts
+                }
+            ]
+        },
+        {
+            path: '*',
+            redirect: '/top'
+        }
+    ]
+})
+
+// グローバルのフック関数
+router.beforeEach(function(to, from, next) {
+    if (to.path === '/maintenance') {
+        console.log("access to /maintenance")
+        next('/top')
+    } else {
+        next()
+    }
+})
+
+var vm = new Vue({
+    router: router,
+    data: {
+        Auth: Auth
+    }
+    // computed: {
+    //     // これを methods に置くと、ログアウトした時に変更が検知できず、isLoggedIn=trueのまま更新されない
+    //     isLoggedIn: function() {
+    //         return Auth.isLoggedIn()
+    //     }
+    // }
+}).$mount('#app')
+</script>
+
+<style type="text/css">
+.error {
+    color: red;
+}
+.user-profile {
+    color: gray;
+}
+.user-posts {
+    color: gray;
+}
+</style>
+</html>
