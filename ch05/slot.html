@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Vue.js slot</title>
+</head>
+
+<body>
+    <div id="app">
+        <div>
+            <h1>単一スロット</h1>
+            <div class="note">
+                <p>Vueコンポーネントは、基本開始タグと終了タグの間のコンテンツは無視される。&lt;my-component&gt;ここは無視される&lt;my-component&gt;</p>
+                <p>スロットはそれとは異なり、外からコンテンツを受け付ける仕組み。</p>
+                <p>例えばモーダルで外からコンテンツを与える際に、強調表示を行ったり、メッセージを一部リンク化したりといったことが柔軟に行えるようになる。</p>
+
+            </div>
+            <my-button>送信する</my-button>
+            <my-button></my-button>
+        </div>
+        <div>
+            <h1>名前付きスロット</h1>
+            <div class="note">
+                <p>slotにname属性で名前を指定し、外部から特定のスロットにコンテンツを挿入できるようにしたもの。</p>
+                <p>コンポーネントを複数のスロットで構成して、個別のコンテンツを挿入できるようになる。</p>
+                <p>単一スロットとの併用も可能。</p>
+            </div>
+            <my-box>
+                <div class="box">
+                    <h3 slot="header" class="header">タイトル</h3>
+                    <p>あのイーハトーヴォのすきとおった風、</p>
+                    <p>夏でも底に冷たさをもつ青いそら、</p>
+                    <p>うつくしい森で飾られたモリーオ市、</p>
+                    <p>郊外のぎらぎらひかる草の波。</p>
+                    <p slot="footer" class="footer">フッター</p>
+                </div>
+            </my-box>
+            <my-box>
+                <div class="box">
+                    <h3 slot="header">footerなし</h3>
+                    <p>footerなしにしたい場合は、単にslot="footer"を指定したdomを作らないだけ</p>
+                </div>
+            </my-box>
+        </div>
+        <div>
+            <h1>スコープ付きスロット</h1>
+            <todo-list>
+                <li>hogehoge</li>
+            </todo-list>
+            <h3>Incompleted todos</h3>
+            <todo-list :todos="todos"> <!-- slot-scopeプロパティを用いて、親コンポーネントからわたsれたデータをスコープとしてまとめて受け取る。 -->
+                <li slot-scope="slotProps" v-if="!slotProps.todo.isCompleted">
+                    {{ slotProps.todo.text }}
+                </li>
+            </todo-list>
+            <h3>Completed todos</h3> <!-- ES2015の分割代入の仕様を活用して、属性ちに分割代入の指揮を記述し、todo変数を宣言。もうslotPropsって書かなくても良い -->
+            <todo-list :todos="todos">
+                <li slot-scope="{ todo }" v-if="todo.isCompleted">
+                    {{ todo.text }}
+                </li>
+            </todo-list>
+        </div>
+    </div>
+    <script src="https://unpkg.com/vue@2.5.17"></script>
+</body>
+
+<script>
+var MyButton = {
+    // slot は親コンポーネントで渡されたコンテンツに置き換えられる
+    template: `
+        <button>
+            <slot>OK</slot>
+        </button>
+    `
+}
+
+var MyBox = {
+    // <div class="box"> が描画されない...
+    template: `
+        <div>
+            <header>
+                <slot name="header"></slot>
+            </header>
+            <main>
+                <slot></slot>
+            </main>
+            <footer>
+                <slot name="footer"></slot>
+            </footer>
+        </div>
+    `
+}
+
+var TodoList = {
+    props: {
+        todos: {
+            type: Array,
+            required: true
+        }
+    },
+    <!-- v-bindディレクティブ(v-bind:todo="todo")でtodoお親コンポーネントに渡す -->
+    template: `
+        <ul>
+            <template v-for="todo in todos">
+                <slot :todo="todo">
+                    <li :key="todo.id">
+                        {{ todo.text}}
+                    </li>
+                </slot>
+            </template>
+        </ul>
+    `
+}
+
+new Vue({
+    el: '#app',
+    data: function() {
+        return {
+            todos: [
+                {id: 1, text: '醤油', isCompleted: false},
+                {id: 2, text: 'ソース', isCompleted: false},
+                {id: 3, text: '酢', isCompleted: false},
+                {id: 4, text: '味噌', isCompleted: true},
+            ]
+        }
+    },
+    components: {
+        MyButton: MyButton,
+        MyPage: MyBox,
+        TodoList: TodoList
+    }
+})
+</script>
+
+<style type="text/css">
+h1 {
+    margin-top: 60px;
+    border-top: 1px solid gray;
+    padding-top: 30px;
+}
+.box {
+    border: 1px solid #d3d3d3;
+    margin: 10px;
+    padding: 10px;
+}
+.header {
+    font-weight: bold;
+}
+.main {
+
+}
+.footer {
+    color: gray;
+    font-size: 90%;
+    text-align: center;
+}
+.note {
+    border: 1px solid #d3d3d3;
+    margin: 10px;
+    padding: 10px;
+    color: gray;
+}
+</style>
+</html>
